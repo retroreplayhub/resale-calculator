@@ -25,7 +25,11 @@ h1{font-size:20px;margin:4px 0 14px}
 .back{transform:rotateY(180deg)}
 .flip.on .front{transform:rotateY(-180deg)}
 .flip.on .back{transform:rotateY(0)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;margin-top:12px;align-items:stretch}
+.grid>div{display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
+.grid>div>label{line-height:1.4;margin-bottom:6px;overflow-wrap:anywhere}
+.grid>div>input,.grid>div>select{flex:0 0 auto;height:46px;min-width:0}
+@media(max-width:359px){.grid{grid-template-columns:minmax(0,1fr)}}
 label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
 input,select{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
 .full{grid-column:1/-1}
