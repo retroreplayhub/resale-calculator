@@ -277,19 +277,19 @@ function calc(){
 }
 function bulkReportRows(){
  bulkCalc();if(gid('bkError').textContent){gid('bkExportStatus').textContent='Correct the batch inputs before exporting.';return null;}
- var rows=[['RetroReplayHub bulk purchase report',''],['Generated',new Date().toLocaleString()],['Report type','Snapshot of current inputs and results; no Excel recalculation'],['Inputs','']];
+ var rows=[['Bulk purchase report',''],['Generated',new Date().toLocaleString()],['Report type','Snapshot of current inputs and results; no Excel recalculation'],['Inputs','']];
  document.querySelectorAll('#bulk input').forEach(function(e){var label=document.querySelector('label[for="'+e.id+'"]');rows.push([label?label.textContent:e.id,Number(e.value)])});
  rows.push(['Sales channel',gid('bkChannel').options[gid('bkChannel').selectedIndex].text]);rows.push(['Results','']);
  document.querySelectorAll('#bkResults table tr').forEach(function(tr){var cells=tr.querySelectorAll('td'),text=cells[1].textContent,n=Number(text.replace(/[$,]/g,''));rows.push([cells[0].textContent,text.trim()!==''&&Number.isFinite(n)?n:text])});
  rows.push(['Average suggested list price',gid('bkSuggested').textContent]);
  document.querySelectorAll('#bulk p.note,#bkResults p').forEach(function(e){rows.push(['Assumption / note',e.textContent])});
- rows.push(['Attribution','Free to use. Created by RetroReplayHub.']);return rows;
+ return rows;
 }
 function escapeXml(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]})}
 function printBulk(){
  var rows=bulkReportRows();if(!rows)return;
- gid('printReport').innerHTML='<h1>RetroReplayHub</h1><h2>Bulk purchase report</h2><table>'+rows.map(function(row){return '<tr><td>'+escapeXml(row[0])+'</td><td>'+escapeXml(row[1])+'</td></tr>'}).join('')+'</table>';
- window.print();gid('bkExportStatus').textContent='Print dialog opened. Choose Save as PDF to download a PDF.';
+ gid('printReport').innerHTML='<h1>Bulk purchase report</h1><table>'+rows.map(function(row){return '<tr><td>'+escapeXml(row[0])+'</td><td>'+escapeXml(row[1])+'</td></tr>'}).join('')+'</table>';
+ var previousTitle=document.title;document.title='Bulk Purchase Report';try{window.print()}finally{document.title=previousTitle}gid('bkExportStatus').textContent='Print dialog opened. Choose Save as PDF to download a PDF.';
 }
 // Native XLSX with typed numeric cells, wrapped labels, no remote dependencies.
 // ZIP uses uncompressed entries so downloads work offline.
@@ -311,7 +311,7 @@ function xlsxBytes(rows){
  var c=header(46);c.view.setUint32(0,0x02014b50,true);c.view.setUint16(4,20,true);c.view.setUint16(6,20,true);c.view.setUint32(16,sum,true);c.view.setUint32(20,data.length,true);c.view.setUint32(24,data.length,true);c.view.setUint16(28,n.length,true);c.view.setUint32(42,offset,true);central.push(c.bytes,n);centralSize+=46+n.length;offset+=30+n.length+data.length;});
  var end=header(22),count=Object.keys(files).length;end.view.setUint32(0,0x06054b50,true);end.view.setUint16(8,count,true);end.view.setUint16(10,count,true);end.view.setUint32(12,centralSize,true);end.view.setUint32(16,offset,true);return new Blob(chunks.concat(central,[end.bytes]),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
-function downloadBulkExcel(){var rows=bulkReportRows();if(!rows)return;try{var url=URL.createObjectURL(xlsxBytes(rows)),a=document.createElement('a');a.href=url;a.download='RetroReplay-Bulk-'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},10000);gid('bkExportStatus').textContent='Excel snapshot downloaded.'}catch(e){gid('bkExportStatus').textContent='Download failed. Please try again.'}}
+function downloadBulkExcel(){var rows=bulkReportRows();if(!rows)return;try{var url=URL.createObjectURL(xlsxBytes(rows)),a=document.createElement('a');a.href=url;a.download='Bulk-Purchase-'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},10000);gid('bkExportStatus').textContent='Excel snapshot downloaded.'}catch(e){gid('bkExportStatus').textContent='Download failed. Please try again.'}}
 // Pure batch model. Premium proceeds are already net of their selling expenses.
 function bulkModel(o){
  var usable=o.received-o.reject,sold=Math.floor(usable*o.sell/100+1e-9),remaining=sold-o.premiumCount;
