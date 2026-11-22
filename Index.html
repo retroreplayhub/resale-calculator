@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Resale Price Calculator</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--text:#1d1d1b;--muted:#6b6a65;--line:#e2e0d9;--accent:#0f766e;--accentbg:#e6f4f1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--card:#1f1f1d;--text:#f0efe9;--muted:#a3a29b;--line:#34332f;--accent:#5eead4;--accentbg:#16302c}}
+:root[data-theme="dark"]{--bg:#141413;--card:#1f1f1d;--text:#f0efe9;--muted:#a3a29b;--line:#34332f;--accent:#5eead4;--accentbg:#16302c}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 14px}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin:4px 0 14px}
+.hdr h1{margin:0}
+.info{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--accent);font:italic 700 18px Georgia,serif;padding:0}
+#plat{font-weight:600;padding:12px;margin-bottom:14px;background:var(--card)}
+.flip{display:grid;align-items:start;perspective:1400px}
+.face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .5s ease}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.back{transform:rotateY(180deg)}
+.flip.on .front{transform:rotateY(-180deg)}
+.flip.on .back{transform:rotateY(0)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+input,select{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.full{grid-column:1/-1}
+.res{background:var(--accentbg);border:1px solid var(--accent);border-radius:12px;padding:14px;margin-top:14px}
+.big{font-size:38px;font-weight:700;color:var(--accent);line-height:1.1}
+.sub{color:var(--muted);font-size:14px;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+td{padding:5px 0;border-bottom:1px solid var(--line)}
+td:last-child{text-align:right}
+tr.tot td{font-weight:700;border-bottom:none}
+.link{background:none;border:none;color:var(--accent);font-size:15px;font-weight:600;padding:0;margin-top:12px}
+.top{display:flex;justify-content:space-between;align-items:center}
+details{margin-top:12px}
+details summary{cursor:pointer;color:var(--muted);font-size:14px}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.sec{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;padding-top:12px}
+.res details{margin-top:12px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.show{display:flex}
+.sheet{background:var(--card);color:var(--text);width:100%;max-width:520px;max-height:85%;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.how h3{font-size:14px;margin:14px 0 4px}
+.how ol,.how ul{margin:4px 0;padding-left:20px;font-size:14px}
+.how li{margin:3px 0}
+.how p{font-size:14px;margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hdr"><h1>Resale Price Calculator</h1><button class="info" type="button" aria-label="How it works" onclick="howOpen(true)">i</button></div>
+
+<select id="plat" aria-label="Platform">
+<option value="posh">Poshmark</option>
+<option value="ebay">eBay</option>
+<option value="depop">Depop</option>
+<option value="vinted">Vinted</option>
+<option value="mercari">Mercari</option>
+<option value="fbship">Facebook Marketplace (shipped)</option>
+<option value="fblocal">Facebook Marketplace (local pickup)</option>
+<option value="etsy">Etsy</option>
+<option value="grailed">Grailed</option>
+<option value="whatnot">Whatnot</option>
+<option value="thredup">ThredUp</option>
+</select>
+
+<div class="flip" id="flip">
+
+<section class="face front card" id="front">
+<label>Purchase price ($)</label>
+<input id="cost" type="number" inputmode="decimal" placeholder="Auto-fills with the max you should pay" oninput="costManual=this.value!==''">
+<button class="link" id="reset" type="button" onclick="costReset()" style="display:none;margin-top:8px;font-size:14px">Reset to suggestion</button>
+<div style="margin-top:10px"><label>Retail or comp price ($)</label><input id="ret" type="number" inputmode="decimal" placeholder="e.g. 98"></div>
+<div class="res">
+<div class="sub">Minimum price to hit your goal</div>
+<div class="big" id="min">$0.00</div>
+<div class="sub" id="listline"></div>
+<div id="extra"></div>
+<details><summary>Show the math</summary><table id="mathtbl"></table></details>
+</div>
+<button class="link" type="button" onclick="flipTile(true)">Edit costs &amp; fees &rsaquo;</button>
+</section>
+
+<section class="face back card" id="back">
+<div class="top"><b>Costs &amp; fees</b><button class="link" type="button" style="margin:0" onclick="flipTile(false)">Done</button></div>
+<div class="grid">
+<div><label>Supplies ($)</label><input id="sup" type="number" inputmode="decimal" value="1"></div>
+<div><label>Target profit ($)</label><input id="profit" type="number" inputmode="decimal" value="5"></div>
+<div><label>Time per item (min)</label><input id="mins" type="number" inputmode="decimal" value="20"></div>
+<div><label>Your hourly rate ($)</label><input id="rate" type="number" inputmode="decimal" value="18"></div>
+<div><label>Who pays shipping</label><select id="payer"><option value="buyer">Buyer pays</option><option value="me">I pay (free shipping)</option></select></div>
+<div><label>Label cost ($)</label><input id="ship" type="number" inputmode="decimal" value="7"></div>
+<div class="full"><label>Offer cushion (%)</label><input id="cush" type="number" inputmode="decimal" value="10"></div>
+</div>
+<details><summary>Fee settings</summary>
+<div class="grid">
+<div><label>Poshmark fee (%)</label><input id="pr" type="number" inputmode="decimal" value="20"></div>
+<div><label>eBay fee (%)</label><input id="er" type="number" inputmode="decimal" value="13.6"></div>
+<div><label>Depop processing (%)</label><input id="dr" type="number" inputmode="decimal" value="3.3"></div>
+<div><label>Depop fixed fee ($)</label><input id="df" type="number" inputmode="decimal" value="0.45"></div>
+<div><label>Mercari fee (%)</label><input id="mr" type="number" inputmode="decimal" value="10"></div>
+<div><label>Facebook fee (%)</label><input id="fr" type="number" inputmode="decimal" value="10"></div>
+<div><label>Etsy transaction (%)</label><input id="etr" type="number" inputmode="decimal" value="6.5"></div>
+<div><label>Etsy processing (%)</label><input id="epr" type="number" inputmode="decimal" value="3"></div>
+<div><label>Grailed under $120 (%)</label><input id="gl" type="number" inputmode="decimal" value="6"></div>
+<div><label>Grailed $120 and up (%)</label><input id="gh" type="number" inputmode="decimal" value="9"></div>
+<div><label>Grailed processing (%)</label><input id="gp" type="number" inputmode="decimal" value="3.49"></div>
+<div><label>Whatnot commission (%)</label><input id="wr" type="number" inputmode="decimal" value="8"></div>
+<div class="full"><label>ThredUp payout (% of sale price)</label><input id="tup" type="number" inputmode="decimal" value="30"></div>
+</div>
+</details>
+<button class="link" type="button" onclick="resetS()" style="font-size:14px">Reset settings to defaults</button>
+<div class="note" id="note"></div>
+</section>
+
+</div>
+
+<div class="modal" id="how" onclick="if(event.target===this)howOpen(false)">
+<div class="sheet how">
+<div class="top"><b style="font-size:17px">How it works</b><button class="link" type="button" style="margin:0" onclick="howOpen(false)">Close</button></div>
+<h3>How to use it</h3>
+<ol>
+<li><b>Pick your platform</b> from the dropdown at the top. Fees change with each one, so every number updates.</li>
+<li><b>Enter a retail or comp price.</b> Use the retail price for NWT items, or a sold comp for anything else. This is what you expect to list the item for.</li>
+<li><b>Read your purchase price.</b> It fills in automatically with the most you should pay and still hit your profit goal. You can type your own, and everything recalculates with it as your item cost. Tap &ldquo;Reset to suggestion&rdquo; to go back to the auto number.</li>
+<li><b>Read the result.</b> The big number is the minimum price to hit your goal. Below it is the list price that leaves room for an offer.</li>
+</ol>
+<h3>What the result tells you</h3>
+<ul>
+<li><b>Verdict:</b> &ldquo;Works&rdquo; means your price covers your goal even after an offer. &ldquo;Too low&rdquo; means you need to list higher or pay less.</li>
+<li><b>List price:</b> the price you entered.</li>
+<li><b>Profit if sold after an offer:</b> what you keep if a buyer takes your offer cushion (10% by default).</li>
+<li><b>Max purchase price:</b> the ceiling for what to pay at the store.</li>
+<li><b>Show the math:</b> walks through how the minimum price is built, step by step.</li>
+</ul>
+<h3>Costs and fees</h3>
+<p>Tap <b>Edit costs &amp; fees</b> to flip the tile. You can set supplies, target profit, time per item, your hourly rate, who pays shipping, the label cost, the offer cushion, and every fee percentage under &ldquo;Fee settings.&rdquo;</p>
+<h3>Fees used (US, Nov 2026)</h3>
+<ul>
+<li><b>Poshmark:</b> 20% on $15 and up, $2.95 flat under $15.</li>
+<li><b>eBay:</b> 13.6% on item plus shipping, plus $0.30 or $0.40 per order.</li>
+<li><b>Depop:</b> 3.3% + $0.45 processing.</li>
+<li><b>Vinted:</b> no seller fees.</li>
+<li><b>Mercari:</b> 10% on item plus buyer-paid shipping.</li>
+<li><b>Facebook Marketplace:</b> 10% on shipped orders (min $0.80), $0 for local pickup.</li>
+<li><b>Etsy:</b> $0.20 listing, 6.5% transaction, 3% + $0.25 processing.</li>
+<li><b>Grailed:</b> 6% under $120 ($1.99 min), 9% at $120+, plus 3.49% + $0.49 processing.</li>
+<li><b>Whatnot:</b> 8% commission, plus 2.9% + $0.30 processing.</li>
+<li><b>ThredUp:</b> you keep a share of the sale price (default 30%), which varies by price and brand. Treat it as a rough check.</li>
+</ul>
+<h3>Tips</h3>
+<ul>
+<li>Use sold comps, not active listings.</li>
+<li>Your costs, fees and platform are saved on this device, so you only enter prices each time. Use &ldquo;Reset settings to defaults&rdquo; on the back of the tile to clear them.</li>
+<li>If the max purchase price is $0 or very low, the item probably isn&rsquo;t worth buying at your profit goal.</li>
+</ul>
+</div>
+</div>
+
+</div>
+
+<script>
+var costManual=false;
+var KEYS=["plat","sup","profit","mins","rate","payer","ship","cush","pr","er","dr","df","mr","fr","etr","epr","gl","gh","gp","wr","tup"];
+function gid(i){return document.getElementById(i)}
+function v(id){var x=parseFloat(gid(id).value);return isNaN(x)?0:x}
+function m(n){return (n<0?"-":"")+"$"+Math.abs(n).toFixed(2)}
+function saveS(){try{var o={};KEYS.forEach(function(k){o[k]=gid(k).value});localStorage.setItem("rpc-settings",JSON.stringify(o))}catch(e){}}
+function loadS(){try{var o=JSON.parse(localStorage.getItem("rpc-settings")||"null");if(!o)return;KEYS.forEach(function(k){if(o[k]!==undefined)gid(k).value=o[k]})}catch(e){}}
+function resetS(){try{localStorage.removeItem("rpc-settings")}catch(e){}location.reload()}
+function flipTile(on){gid("flip").classList.toggle("on",on);gid("front").inert=on;gid("back").inert=!on;window.scrollTo(0,0)}
+function howOpen(on){gid("how").classList.toggle("show",on)}
+function costReset(){costManual=false;calc()}
+var NOTES={
+ posh:"Poshmark: 20% on sales of $15 and up, $2.95 flat under $15. Fee is on the item price only.",
+ ebay:"eBay: final value fee applies to item plus shipping charged, plus $0.40 per order ($0.30 if the order is $10 or less). Sales tax is also in eBay\u2019s fee base, so real fees run slightly higher.",
+ depop:"Depop: no selling fee, but payment processing is 3.3% plus $0.45 on the order total, including shipping.",
+ vinted:"Vinted: no seller fees. The buyer pays a buyer protection fee on top, which doesn\u2019t come out of your payout.",
+ mercari:"Mercari: 10% selling fee on the item price plus buyer-paid shipping. No separate payment processing fee on new or updated listings. The buyer pays a 3.6% protection fee on top.",
+ fbship:"Facebook Marketplace (shipped): 10% of the order total through Facebook checkout, $0.80 minimum. Tax is also in the fee base, so real fees run slightly higher.",
+ fblocal:"Facebook Marketplace (local pickup): no fee when you meet in person and get paid in cash or an outside app. Shipping fields are ignored.",
+ etsy:"Etsy: $0.20 listing fee, 6.5% transaction fee on item plus shipping, and 3% + $0.25 payment processing. Offsite Ads (12-15% on ad-driven sales) are not included.",
+ grailed:"Grailed: 6% commission under $120 ($1.99 minimum) and 9% at $120 and up, plus 3.49% + $0.49 payment processing.",
+ whatnot:"Whatnot: 8% commission on the item price, plus 2.9% + $0.30 processing on the order total. Commission can be lower by sales tier and category, so adjust it under Fee settings.",
+ thredup:"ThredUp: you earn a share of the selling price, from about 3% on cheap items up to 80% at $200+. ThredUp sets the price and charges a service fee per bag, so use this as a rough check only. Adjust your payout % under Fee settings. Shipping fields are ignored."
+};
+function calc(){
+  var plat=gid("plat").value;
+  var sup=v("sup"),time=v("mins")*v("rate")/60,profit=v("profit"),L=v("ship"),cush=v("cush")/100;
+  var payer=gid("payer").value,ret=v("ret"),Sc=0;
+  if(plat==="posh"){L=payer==="me"?L:0}
+  else if(plat==="fblocal"||plat==="thredup"){L=0}
+  else{Sc=payer==="buyer"?L:0}
+  function feeParts(X){
+    var b=X+Sc,a=[];
+    switch(plat){
+      case "posh":
+        if(X>=15)a.push(["Commission ("+v("pr")+"%)",v("pr")/100*X]);else a.push(["Flat fee (under $15)",2.95]);break;
+      case "ebay":
+        a.push(["Final value fee ("+v("er")+"%)",v("er")/100*b]);a.push(["Per-order fee",b<=10?0.30:0.40]);break;
+      case "depop":
+        a.push(["Payment processing ("+v("dr")+"%)",v("dr")/100*b]);a.push(["Fixed fee",v("df")]);break;
+      case "vinted":
+        a.push(["Seller fees",0]);break;
+      case "mercari":
+        a.push(["Selling fee ("+v("mr")+"%)",v("mr")/100*b]);break;
+      case "fbship":
+        a.push(["Selling fee ("+v("fr")+"%, min $0.80)",Math.max(v("fr")/100*b,0.80)]);break;
+      case "fblocal":
+        a.push(["Local pickup fee",0]);break;
+      case "etsy":
+        a.push(["Transaction fee ("+v("etr")+"%)",v("etr")/100*b]);
+        a.push(["Payment processing ("+v("epr")+"% + $0.25)",v("epr")/100*b+0.25]);
+        a.push(["Listing fee",0.20]);break;
+      case "grailed":
+        a.push(["Commission ("+(X<120?v("gl"):v("gh"))+"%)",X<120?Math.max(v("gl")/100*b,1.99):v("gh")/100*b]);
+        a.push(["Payment processing ("+v("gp")+"% + $0.49)",v("gp")/100*b+0.49]);break;
+      case "whatnot":
+        a.push(["Commission ("+v("wr")+"% of item)",v("wr")/100*X]);
+        a.push(["Payment processing (2.9% + $0.30)",0.029*b+0.30]);break;
+      case "thredup":
+        a.push(["ThredUp share ("+Number((100-v("tup")).toFixed(1))+"% of price)",(1-v("tup")/100)*X]);break;
+    }
+    return a}
+  function fees(X){var s=0;feeParts(X).forEach(function(p){s+=p[1]});return s}
+  function netAt(X){return X+Sc-fees(X)-L}
+  function priceFor(N0){
+    var x=Math.max(0,Math.ceil((N0+L-Sc)*100)/100);
+    for(var i=0;i<80;i++){
+      var d=N0-netAt(x);if(d<=0.0001)break;
+      var s=(netAt(x+0.5)-netAt(x))/0.5;if(s<0.02)s=0.02;if(s>1)s=1;
+      x=Math.ceil((x+Math.max(0.01,d/s))*100)/100}
+    return x}
+  var tp=ret>0?ret:0;
+  var maxCost=ret>0?Math.max(0,Math.floor((netAt(tp*(1-cush))-sup-time-profit)*100+1e-9)/100):0;
+  if(!costManual)gid("cost").value=ret>0?maxCost.toFixed(2):"";
+  gid("reset").style.display=costManual&&ret>0?"inline-block":"none";
+  var cost=v("cost"),N0=cost+sup+time+profit,P=priceFor(N0);
+  var list=cush<1?Math.ceil(P/(1-cush)*100)/100:P;
+  var has=cost>0||ret>0;
+  gid("min").textContent=has?m(P):"$0.00";
+  gid("listline").textContent=!has?"Enter a purchase price or a retail price":(cush>0?"List at "+m(list)+" to leave room for a "+(cush*100).toFixed(0)+"% offer":"");
+  var h="";
+  if(ret>0){
+    var after=netAt(tp*(1-cush))-cost-sup-time,verdict;
+    if(tp>=list)verdict="Works: your price covers your goal, even after an offer.";
+    else verdict="Price is too low for your goal. List at "+m(list)+" or more, or pay less.";
+    h="<div style=\"font-weight:600;margin-top:10px\">"+verdict+"</div><table><tr><td>List price</td><td>"+m(tp)+"</td></tr><tr><td>Profit if sold after a "+(cush*100).toFixed(0)+"% offer</td><td>"+m(after)+"</td></tr><tr class=\"tot\"><td>Max purchase price</td><td>"+m(maxCost)+"</td></tr></table>";
+  }
+  gid("extra").innerHTML=h;
+  var t="";
+  function R(a,b,c){t+="<tr"+(c?" class=\"tot\"":"")+"><td>"+a+"</td><td>"+b+"</td></tr>"}
+  function S(a){t+="<tr><td colspan=\"2\" class=\"sec\">"+a+"</td></tr>"}
+  S("Costs to cover");
+  R("Purchase price",m(cost));R("Supplies",m(sup));
+  R("Your time ("+v("mins")+" min at $"+v("rate")+"/hr)",m(time));R("Target profit",m(profit));
+  R("Costs to cover",m(N0),1);
+  if(L>0||Sc>0){S("Shipping");if(L>0)R("Shipping label",m(L));if(Sc>0)R("Shipping paid by buyer","\u2212"+m(Sc))}
+  S("Platform fees at "+m(P));
+  var parts=feeParts(P),ft=0;
+  parts.forEach(function(p){R(p[0],m(p[1]));ft+=p[1]});
+  if(parts.length>1)R("Total fees",m(ft),1);
+  S("Result");
+  R("Minimum price (rounded up)",m(P),1);
+  R("Take-home after fees and shipping",m(netAt(P)));
+  R("Profit after your costs",m(netAt(P)-cost-sup-time));
+  t+="<tr><td colspan=\"2\" class=\"note\">The price is solved so that price minus fees, shipping and your costs equals your target profit. Fees are taken on the price itself, so they&rsquo;re included in the result.</td></tr>";
+  gid("mathtbl").innerHTML=t;
+  gid("note").textContent=NOTES[plat]+" Fees verified as of Nov 2026, so check your category for exceptions.";
+}
+document.querySelectorAll("input,select").forEach(function(e){e.addEventListener("input",function(){calc();saveS()})});
+gid("back").inert=true;
+loadS();
+calc();
+</script>
+</body>
+</html>
